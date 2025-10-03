@@ -8,6 +8,11 @@ app.use(express.json());
 let seq = 1;
 const tarefas = []; // { id, titulo, descricao, concluida, createdAt }
 
+// Rota raiz
+app.get("/", (req, res) => {
+  res.send("API de Tarefas rodando! Use /tarefas");
+});
+
 // Listar
 app.get("/tarefas", (req, res) => {
   res.json(tarefas);
@@ -61,5 +66,8 @@ app.delete("/tarefas/:id", (req, res) => {
   res.status(204).end();
 });
 
+// Porta
 const port = process.env.PORT || 3000;
-app.listen(port, () => console.log(`API rodando em http://localhost:${port}`));
+app.listen(port, () =>
+  console.log(`API rodando em http://localhost:${port}`)
+);
