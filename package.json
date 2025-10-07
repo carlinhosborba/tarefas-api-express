@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "cors": "^2.8.5",
+    "expo-updates": "~29.0.12",
     "express": "^4.19.2",
     "morgan": "^1.10.1"
   }
