@@ -1,9 +1,13 @@
 import express from "express";
 import cors from "cors";
+import morgan from "morgan";
 
 const app = express();
+
+// Middlewares
 app.use(cors());
 app.use(express.json());
+app.use(morgan("dev")); // <-- loga cada request no Render
 
 let seq = 1;
 const tarefas = []; // { id, titulo, descricao, concluida, createdAt }
@@ -20,7 +24,7 @@ app.get("/tarefas", (req, res) => {
 
 // Buscar por id
 app.get("/tarefas/:id", (req, res) => {
-  const t = tarefas.find(x => x.id === Number(req.params.id));
+  const t = tarefas.find((x) => x.id === Number(req.params.id));
   if (!t) return res.status(404).json({ error: "Tarefa não encontrada" });
   res.json(t);
 });
@@ -42,7 +46,7 @@ app.post("/tarefas", (req, res) => {
 
 // Atualizar (PUT)
 app.put("/tarefas/:id", (req, res) => {
-  const i = tarefas.findIndex(x => x.id === Number(req.params.id));
+  const i = tarefas.findIndex((x) => x.id === Number(req.params.id));
   if (i < 0) return res.status(404).json({ error: "Tarefa não encontrada" });
   const { titulo, descricao = "", concluida = false } = req.body || {};
   if (!titulo) return res.status(400).json({ error: "titulo é obrigatório" });
@@ -52,7 +56,7 @@ app.put("/tarefas/:id", (req, res) => {
 
 // Atualizar parcialmente (PATCH)
 app.patch("/tarefas/:id", (req, res) => {
-  const i = tarefas.findIndex(x => x.id === Number(req.params.id));
+  const i = tarefas.findIndex((x) => x.id === Number(req.params.id));
   if (i < 0) return res.status(404).json({ error: "Tarefa não encontrada" });
   tarefas[i] = { ...tarefas[i], ...req.body };
   res.json(tarefas[i]);
@@ -60,7 +64,7 @@ app.patch("/tarefas/:id", (req, res) => {
 
 // Remover
 app.delete("/tarefas/:id", (req, res) => {
-  const i = tarefas.findIndex(x => x.id === Number(req.params.id));
+  const i = tarefas.findIndex((x) => x.id === Number(req.params.id));
   if (i < 0) return res.status(404).json({ error: "Tarefa não encontrada" });
   tarefas.splice(i, 1);
   res.status(204).end();
@@ -68,6 +72,4 @@ app.delete("/tarefas/:id", (req, res) => {
 
 // Porta
 const port = process.env.PORT || 3000;
-app.listen(port, () =>
-  console.log(`API rodando em http://localhost:${port}`)
-);
+app.listen(port, () => console.log(`API rodando em http://localhost:${port}`));
