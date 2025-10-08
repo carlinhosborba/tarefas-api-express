@@ -1,65 +1,94 @@
-import express from "express";
-import cors from "cors";
-import morgan from "morgan";
+// servidor Express bem simples para /tarefas
+const express = require("express");
+const cors = require("cors");
+const morgan = require("morgan");
+const crypto = require("crypto");
 
 const app = express();
+const PORT = process.env.PORT || 3000;
+
 app.use(cors());
+app.use(morgan("dev"));
 app.use(express.json());
-app.use(morgan("dev")); // <— loga cada request
 
-let seq = 1;
-const tarefas = []; // { id, titulo, descricao, concluida, createdAt }
+// store em memória (reinicia a cada deploy/restart)
+let tarefas = [
+  {
+    id: "1",
+    titulo: "Exemplo",
+    descricao: "Primeira tarefa do servidor",
+    concluida: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
 
+const genId = () =>
+  (crypto.randomUUID && crypto.randomUUID()) ||
+  Math.random().toString(36).slice(2) + Date.now().toString(36);
+
+// Healthcheck
 app.get("/", (_req, res) => {
-  res.send("API de Tarefas rodando! Use /tarefas");
+  res.json({ name: "tarefas-api-express", ok: true });
+});
+app.get("/healthz", (_req, res) => {
+  res.status(200).json({ ok: true });
 });
 
+// Listar
 app.get("/tarefas", (_req, res) => {
   res.json(tarefas);
 });
 
-app.get("/tarefas/:id", (req, res) => {
-  const t = tarefas.find(x => x.id === Number(req.params.id));
-  if (!t) return res.status(404).json({ error: "Tarefa não encontrada" });
-  res.json(t);
-});
-
+// Criar
 app.post("/tarefas", (req, res) => {
-  const { titulo, descricao = "" } = req.body || {};
-  if (!titulo) return res.status(400).json({ error: "titulo é obrigatório" });
+  const { titulo, descricao } = req.body || {};
+  const now = new Date().toISOString();
   const nova = {
-    id: seq++,
-    titulo,
-    descricao,
+    id: genId(),
+    titulo: titulo ?? descricao ?? "Sem título",
+    descricao: descricao ?? "",
     concluida: false,
-    createdAt: new Date().toISOString(),
+    createdAt: now,
+    updatedAt: now,
   };
-  tarefas.push(nova);
+  tarefas.unshift(nova);
   res.status(201).json(nova);
 });
 
+// Atualizar
 app.put("/tarefas/:id", (req, res) => {
-  const i = tarefas.findIndex(x => x.id === Number(req.params.id));
-  if (i < 0) return res.status(404).json({ error: "Tarefa não encontrada" });
-  const { titulo, descricao = "", concluida = false } = req.body || {};
-  if (!titulo) return res.status(400).json({ error: "titulo é obrigatório" });
-  tarefas[i] = { ...tarefas[i], titulo, descricao, concluida: !!concluida };
-  res.json(tarefas[i]);
+  const { id } = req.params;
+  const idx = tarefas.findIndex((t) => t.id === id);
+  if (idx === -1) return res.status(404).json({ error: "Tarefa não encontrada" });
+
+  const { titulo, descricao, concluida } = req.body || {};
+  const atualizada = {
+    ...tarefas[idx],
+    titulo: titulo ?? tarefas[idx].titulo,
+    descricao: descricao ?? tarefas[idx].descricao,
+    concluida: typeof concluida === "boolean" ? concluida : tarefas[idx].concluida,
+    updatedAt: new Date().toISOString(),
+  };
+  tarefas[idx] = atualizada;
+  res.json(atualizada);
 });
 
-app.patch("/tarefas/:id", (req, res) => {
-  const i = tarefas.findIndex(x => x.id === Number(req.params.id));
-  if (i < 0) return res.status(404).json({ error: "Tarefa não encontrada" });
-  tarefas[i] = { ...tarefas[i], ...req.body };
-  res.json(tarefas[i]);
-});
-
+// Remover
 app.delete("/tarefas/:id", (req, res) => {
-  const i = tarefas.findIndex(x => x.id === Number(req.params.id));
-  if (i < 0) return res.status(404).json({ error: "Tarefa não encontrada" });
-  tarefas.splice(i, 1);
-  res.status(204).end();
+  const { id } = req.params;
+  const before = tarefas.length;
+  tarefas = tarefas.filter((t) => t.id !== id);
+  if (tarefas.length === before) return res.status(404).json({ error: "Tarefa não encontrada" });
+  res.status(204).send();
 });
 
-const port = process.env.PORT || 3000;
-app.listen(port, () => console.log(`API rodando em http://localhost:${port}`));
+// Erros genéricos
+app.use((err, _req, res, _next) => {
+  console.error(err);
+  res.status(500).json({ error: "Erro interno" });
+});
+
+app.listen(PORT, () => {
+  console.log(`API ouvindo em http://localhost:${PORT}`);
+});
